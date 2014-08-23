@@ -5,4 +5,5 @@
 ### 主要函数
 
 sendMessageToPhoneGroup 向token列表发送消息
+
 sendMessage 向单个token发送消息
