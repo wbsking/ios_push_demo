@@ -126,7 +126,7 @@ def send_message(device_token, alert, badge=0, sound="chime", content_available=
 
 def rebuild_connection(custom_cert, host_name):
     """ 
-        当出现非常token时重建链接
+        当出现非法token时重建链接
     """
     s = socket.socket()
     c = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_TLSv1, certfile=custom_cert)
