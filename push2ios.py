@@ -36,6 +36,9 @@ class ErrorTokenException(Exception):
 
 
 class ResponseThd(threading.Thread):
+    """
+       检查链接是否返回错误信息，如果返回错误信息，则将消息添加到err_list中返回
+    """
     def __init__(self, passed_socket, err_list):
         super(ResponseThd, self).__init__()
         self._stop = False
@@ -58,6 +61,9 @@ class ResponseThd(threading.Thread):
 
 
 def close_connection(c):
+    """
+        关闭链接
+    """
     try:
         c.shutdown(socket.SHUT_RDWR)
         c.close()
@@ -69,6 +75,9 @@ def send_message(device_token, alert, badge=0, sound="chime", content_available=
                     custom_params={}, action_loc_key=None, loc_key=None,
                     loc_args=[], passed_socket=None, custom_cert=None,
                     identifier=0, expiry=0, debug=True):
+    """ 
+        向单个token发送消息
+    """
     aps_payload = {}
     alert_payload = alert
     if action_loc_key or loc_key or loc_args:
@@ -116,6 +125,9 @@ def send_message(device_token, alert, badge=0, sound="chime", content_available=
 
 
 def rebuild_connection(custom_cert, host_name):
+    """ 
+        当出现非常token时重建链接
+    """
     s = socket.socket()
     c = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_TLSv1, certfile=custom_cert)
     c.connect((host_name, 2195))
@@ -126,11 +138,15 @@ def rebuild_connection(custom_cert, host_name):
 def sendMessageToPhoneGroup(devices_token_list, alert, badge=0, sound="chime", content_available=False,
                             custom_params={}, action_loc_key=None, loc_key=None,
                             loc_args=[], sandbox=False, custom_cert=None, expiry=0):
+    """
+        向devices_token_list列表中的token发送消息
+    """
     if sandbox:
         host_name = APN_SANDBOX_HOST
     else:
         host_name = APN_LIVE_HOST
 
+    # 当发送token的数量超过chunk_size时则重新建立链接
     chunk_size = 100
     current_chunk = 0
 
@@ -146,7 +162,6 @@ def sendMessageToPhoneGroup(devices_token_list, alert, badge=0, sound="chime", c
     thd_pool.append(thd)
 
     current_index = 0
-    err_count = 0
     try:
         while current_index <= list_length - 1:
             if err_list:
@@ -154,7 +169,6 @@ def sendMessageToPhoneGroup(devices_token_list, alert, badge=0, sound="chime", c
                 c = rebuild_connection(custom_cert, host_name)
                 current_index = err_id + 1
                 err_list = list()
-                err_count += 1
 
                 thd = ResponseThd(c, err_list)
                 thd.start()
@@ -168,6 +182,8 @@ def sendMessageToPhoneGroup(devices_token_list, alert, badge=0, sound="chime", c
             except ErrorTokenException, ex:
                 print ex
 
+            # 已经发送完，等待2秒，如果两秒内没有错误发生则认为全部发送成功
+            # 如有错误发生则需要从错误处重新建立链接发送
             if current_index == list_length - 1:
                 time.sleep(2)
                 if err_list:
@@ -175,7 +191,6 @@ def sendMessageToPhoneGroup(devices_token_list, alert, badge=0, sound="chime", c
                     c = rebuild_connection(custom_cert, host_name)
                     current_index = err_id + 1
                     err_list = list()
-                    err_count += 1
 
                     thd = ResponseThd(c, err_list)
                     thd.start()
