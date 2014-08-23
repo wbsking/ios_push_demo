@@ -31,7 +31,7 @@ except ImportError:
     import simplejson as json
 
 
-def ErrorTokenException(Exception):
+class ErrorTokenException(Exception):
     pass
 
 
